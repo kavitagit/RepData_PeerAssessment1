@@ -1,20 +1,101 @@
 # Reproducible Research: Peer Assessment 1
 
-
 ## Loading and preprocessing the data
 
-
+## Load the extracted CSV file
+```{r}
+setwd("/Users/Kavita/Documents/Coursera - Data Science/Reproducible Research/Peer Assessment 1")
+data = read.csv("activity.csv", header = TRUE)
+```
 
 ## What is mean total number of steps taken per day?
 
+## Plot the histogram of the total number of steps taken each day
+```{r}
+total.steps.per.day <- tapply(data$steps, data$date, FUN=sum, na.rm=TRUE)
+hist(total.steps.per.day, col = "blue", main = "Number of steps", ylim = c(0, 
+    40))
+```
 
+## Calculate and report then mean and median total number of steps taken per day:
+```{r}
+print(mean(total.steps.per.day, na.rm = TRUE), digits = 7)
+print(median(total.steps.per.day, na.rm = TRUE), digits = 7)
+```
 
 ## What is the average daily activity pattern?
 
+## Plot the time series of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+avg.steps.per.interval = sapply(split(data$steps, data$interval), mean, na.rm = TRUE)
+plot(avg.steps.per.interval, type = "l", xlab = "Interval", ylab = "Number of steps")
+```
 
+# The 5-minute interval that contains the maximum daily number of steps
+```{r}
+names(avg.steps.per.interval)[avg.steps.per.interval == max(avg.steps.per.interval)]
+```
 
 ## Imputing missing values
 
+## The number of missing values in the initial dataset
+```{r}
+sum(is.na(data$steps))
+```
 
+## All of the missing values are filled in with mean value for that 5-minute interval
+```{r}
+data.filled = data
+for (i in 1:nrow(data.filled)) {
+    if (is.na(data.filled[i, "steps"])) {
+        interval = as.character(data.filled[i, "interval"])
+        data.filled[i, "steps"] = avg.steps.per.interval[interval]
+    }
+}
+```
+
+## The number of missing values in the filled-in dataset
+```{r}
+sum(is.na(data.filled$steps))
+```
+
+## For the filled-in data set, plot the histogram of the total number of steps taken each day and calculate and report the mean and median total number of steps taken per day
+```{r}
+total.steps.per.day.filled = sapply(split(data.filled$steps, data.filled$date), 
+    sum)
+hist(total.steps.per.day.filled, col = "blue", ylim = c(0, 40), main = "Number of steps - missing values replaced")
+```
+
+## Now calculate and report then mean and median total number of steps taken per day (data.filled)
+```{r}
+print(mean(total.steps.per.day.filled, na.rm = TRUE), digits = 7)
+print(median(total.steps.per.day.filled, na.rm = TRUE), digits = 7)
+```
+
+## The impact of imputing missing values
+## Mean and median values are higher after imputing missing data. This is because in the original data, there are some days with NA values and by default, the total number of steps taken in such days are set to 0. After replacing missing steps values with the mean steps of associated interval value, these 0 values are removed from the histogram of total number of steps taken each day.
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+## Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+```{r}
+weekday.or.weekend <- function(date) {
+    day <- weekdays(date)
+    if (day %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday")) 
+        return("weekday") else if (day %in% c("Saturday", "Sunday")) 
+        return("weekend") else stop("invalid date")
+}
+data.filled$date <- as.Date(data.filled$date)
+data.filled$day <- sapply(data.filled$date, FUN = weekday.or.weekend)
+```
+
+## Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)
+
+```{r}
+library(ggplot2)
+averages <- aggregate(steps ~ interval + day, data = data.filled, mean)
+ggplot(averages, aes(interval, steps)) + geom_line() + facet_grid(day ~ .) + 
+    xlab("5-minute interval") + ylab("Number of steps")
+```
+
+
